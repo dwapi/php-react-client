@@ -14,6 +14,11 @@ use React\Promise\Deferred;
 class ReactClient {
   
   /**
+   * @var static
+   */
+  protected static $instance;
+  
+  /**
    * React loop.
    * @var \React\EventLoop\LoopInterface
    */
@@ -46,9 +51,17 @@ class ReactClient {
   protected $browser;
   
   /**
-   * Constructs a WapiReact object.
+   * Constructs a ReactClient object.
    */
   public function __construct() {
+  }
+  
+  static function getInstance() {
+    if(!static::$instance) {
+      static::$instance = new static();
+    }
+    
+    return static::$instance;
   }
   
   public function getLoop(){
