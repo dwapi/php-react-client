@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "fdd0858ee4758125e3f04a6d782ba7b2",
-    "content-hash": "21a2ce6bdee97a94e831a0535e9bf4d6",
+    "hash": "2b139138abb71136836a2b379235d4ad",
+    "content-hash": "f0be0c61e67dc20eadf122b07b02a1a4",
     "packages": [
         {
             "name": "clue/buzz-react",
@@ -174,6 +174,39 @@
                 "url"
             ],
             "time": "2017-03-20 17:10:46"
+        },
+        {
+            "name": "nyariv/wapi-protocol",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dwapi/php-wapi-protocol.git",
+                "reference": "3176fa5e6faf97cb93ca48e09cfe437356b9f128"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dwapi/php-wapi-protocol/zipball/3176fa5e6faf97cb93ca48e09cfe437356b9f128",
+                "reference": "3176fa5e6faf97cb93ca48e09cfe437356b9f128",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Wapi\\Protocol\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nir Yariv",
+                    "email": "nir@dofinity.com"
+                }
+            ],
+            "description": "WAPI messaging protocol.",
+            "time": "2017-08-05 18:02:35"
         },
         {
             "name": "psr/http-message",
@@ -770,7 +803,9 @@
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "nyariv/wapi-protocol": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],

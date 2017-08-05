@@ -7,6 +7,13 @@ use Ratchet\Client\Connector;
 use Ratchet\Client\WebSocket;
 use React\EventLoop\Timer\TimerInterface;
 use React\Promise\Deferred;
+use React\Promise\FulfilledPromise;
+use React\Promise\Promise;
+use React\Promise\PromiseInterface;
+use Wapi\Protocol\Exception\ApplicationError;
+use Wapi\Protocol\Exception\CommunicationError;
+use Wapi\Protocol\Exception\WapiException;
+use Wapi\Protocol\Protocol;
 
 /**
  * Provides the React Client.
@@ -23,6 +30,11 @@ class ReactClient {
    * @var \React\EventLoop\LoopInterface
    */
   protected $loop;
+  
+  /**
+   * @var WebSocket[]
+   */
+  protected $connections = [];
   
   /**
    * Loop running state.
@@ -101,7 +113,7 @@ class ReactClient {
     }
   }
   
-  public function stopLoop() {
+  public function stopReactor() {
     if($this->loopStarted) {
       if($this->loopTimeout) {
         $this->clearTimeout($this->loopTimeout);
@@ -109,6 +121,10 @@ class ReactClient {
       
       $this->loopStarted = false;
       $this->getLoop()->stop();
+    }
+    
+    foreach($this->connections AS $address => $conn) {
+      $this->wsDisconnect($address);
     }
   }
   
@@ -125,18 +141,88 @@ class ReactClient {
   }
   
   public function wsConnect($address, $success_callback = NULL, $fail_callback = NULL) {
-    $connector = new Connector($this->getLoop());
-    $promise = $connector($address, [], []);
-    
+    $that = $this;
+    if(!empty($this->connections[$address])) {
+      $promise = new FulfilledPromise($this->connections[$address]);
+    } else {
+      $connector = new Connector($this->getLoop());
+      $promise = $connector($address, [], []);
+      
+      $promise->then(function(WebSocket $conn) use ($address, $that, $success_callback) {
+        $that->connections[$address] = $conn;
+        
+        $conn->on('close', function () use ($that, $address) {
+          unset($that->connections[$address]);
+        });
+      });
+    }
     $promise->then($this->appendThisToCallbackArgs($success_callback), $this->appendThisToCallbackArgs($fail_callback));
     
     return $promise;
   }
   
-  public function wsDisconnect(WebSocket $conn = NULL) {
-    if($conn) {
-      $conn->close();
+  public function wsDisconnect($address) {
+    if(!empty($this->connections[$address])) {
+      $this->connections[$address]->close();
+      unset($this->connections[$address]);
     }
+  }
+  
+  public function wsSend($address, $secret, $method, $data, $clock_offset = 0) {
+    $result = $this->newDeferred();
+    
+    $this->wsConnect($address, function (WebSocket $conn, ReactClient $react_client) use ($result, $secret, $method, $data, $clock_offset) {
+      $body = Protocol::buildMessage($secret, $method, $data, $clock_offset);
+      $message_id = $body['message_id'];
+      $conn->send(Protocol::encode($body));
+      
+      $conn->on('message', function ($msg) use ($conn, $react_client, $message_id, $result) {
+        $response = Protocol::decode($msg);
+        if (!empty($response['message_id']) && $response['message_id'] === $message_id) {
+          if (empty($response['status'])) {
+            $result->resolve($response['data']);
+          }
+          else {
+            $result->reject(new ApplicationError($response['error']));
+          }
+        }
+      });
+      
+      $conn->on('close', function () use ($result) {
+        $result->reject(new ApplicationError("Connection closed."));
+      });
+      
+      $timer = $react_client->setTimeout(function () use ($result) {
+        $result->reject(new CommunicationError("Response timed out."));
+      }, 4);
+      
+      $result->promise()->always(function () use ($timer, $react_client) {
+        $react_client->clearTimeout($timer);
+      });
+    }, function(\Exception $e) use ($result) {
+      $result->reject(new CommunicationError($e->getMessage()));
+    });
+    
+    return $result->promise();
+  }
+  
+  public function wait(PromiseInterface $promise, $timeout = NULL) {
+    $that = $this;
+    $result = NULL;
+    
+    $promise->always(function() use ($that) {
+      $that->stopReactor();
+    });
+    
+    $promise->then(function ($res) use (&$result) {
+      $result = $res;
+    }, function (WapiException $e) {
+      throw $e;
+    });
+    
+    $this->startReactor($timeout);
+    
+    return $result;
   }
   
   private function appendThisToCallbackArgs(callable $callback = NULL) {
