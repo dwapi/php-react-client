@@ -23,7 +23,7 @@ class ReactClient {
   /**
    * @var static
    */
-  protected static $instance;
+  protected static $instance = NULL;
   
   /**
    * React loop.
@@ -66,18 +66,19 @@ class ReactClient {
    * Constructs a ReactClient object.
    */
   public function __construct() {
+    $this->loop = \React\EventLoop\Factory::create();
   }
   
   static function getInstance() {
-    if(!static::$instance) {
+    if (!static::$instance) {
       static::$instance = new static();
     }
-    
+  
     return static::$instance;
   }
   
   public function getLoop(){
-    return $this->loop = $this->loop ?: \React\EventLoop\Factory::create();
+    return $this->loop;
   }
   
   public function getAsyncHttpClient() {
@@ -148,7 +149,7 @@ class ReactClient {
       $connector = new Connector($this->getLoop());
       $promise = $connector($address, [], []);
       
-      $promise->then(function(WebSocket $conn) use ($address, $that, $success_callback) {
+      $promise->then(function(WebSocket $conn) use ($address, $that) {
         $that->connections[$address] = $conn;
         
         $conn->on('close', function () use ($that, $address) {
@@ -209,6 +210,8 @@ class ReactClient {
   public function wait(PromiseInterface $promise, $timeout = NULL) {
     $that = $this;
     $result = NULL;
+    /** @var WapiException $error */
+    $error = NULL;
     
     $promise->always(function() use ($that) {
       $that->stopReactor();
@@ -216,11 +219,16 @@ class ReactClient {
     
     $promise->then(function ($res) use (&$result) {
       $result = $res;
-    }, function (WapiException $e) {
-      throw $e;
+    }, function (WapiException $e) use (&$error) {
+      $error = $e;
+      throw $error;
     });
     
     $this->startReactor($timeout);
+    
+    if($error) {
+      throw $error;
+    }
     
     return $result;
   }
