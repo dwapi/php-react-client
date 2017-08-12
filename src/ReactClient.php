@@ -91,7 +91,7 @@ class ReactClient {
         $that = $this;
         $callback = function() use ($timeout_callback, $that) {
           $that->onLoopEnd($timeout_callback);
-          $that->stopLoop();
+          $that->stopReactor();
           foreach($this->onLoopEndCallbacks AS $savedCallback) {
             call_user_func($that->appendThisToCallbackArgs($savedCallback));
           }
@@ -173,7 +173,7 @@ class ReactClient {
     $result = $this->newDeferred();
     
     $this->wsConnect($address, function (WebSocket $conn, ReactClient $react_client) use ($result, $secret, $method, $data, $clock_offset) {
-      $body = Protocol::buildMessage($secret, $method, $data, $clock_offset);
+      $body = Protocol::buildMessage($secret, $method, $data, [], $clock_offset);
       $message_id = $body['message_id'];
       $conn->send(Protocol::encode($body));
       
