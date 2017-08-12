@@ -12,7 +12,7 @@ use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use Wapi\Protocol\Exception\ApplicationError;
 use Wapi\Protocol\Exception\CommunicationError;
-use Wapi\Protocol\Exception\WapiException;
+use Wapi\Protocol\Exception\WapiProtocolException;
 use Wapi\Protocol\Protocol;
 
 /**
@@ -207,10 +207,10 @@ class ReactClient {
     return $result->promise();
   }
   
-  public function wait(PromiseInterface $promise, $timeout = NULL) {
+  public function wait(Promise $promise, $timeout = NULL) {
     $that = $this;
     $result = NULL;
-    /** @var WapiException $error */
+    /** @var \Wapi\Protocol\Exception\WapiProtocolException $error */
     $error = NULL;
     
     $promise->always(function() use ($that) {
@@ -219,7 +219,7 @@ class ReactClient {
     
     $promise->then(function ($res) use (&$result) {
       $result = $res;
-    }, function (WapiException $e) use (&$error) {
+    }, function (WapiProtocolException $e) use (&$error) {
       $error = $e;
       throw $error;
     });
@@ -231,6 +231,14 @@ class ReactClient {
     }
     
     return $result;
+  }
+  
+  public function passPromise(PromiseInterface $promise, Deferred $pass_to) {
+    $promise->then(function ($result) use ($pass_to) {
+      $pass_to->resolve($result);
+    }, function (\Exception $e) use ($pass_to) {
+      $pass_to->reject($e);
+    });
   }
   
   private function appendThisToCallbackArgs(callable $callback = NULL) {
