@@ -62,6 +62,8 @@ class ReactClient {
    */
   protected $browser;
   
+  protected $finalReactor = FALSE;
+  
   /**
    * Constructs a ReactClient object.
    */
@@ -73,7 +75,7 @@ class ReactClient {
     if (!static::$instance) {
       static::$instance = new static();
     }
-  
+    
     return static::$instance;
   }
   
@@ -85,7 +87,11 @@ class ReactClient {
     return $this->browser = $this->browser ?: new Browser($this->getLoop());
   }
   
-  public function startReactor($timeout = NULL, callable $timeout_callback = NULL) {
+  public function startReactor($timeout = NULL, callable $timeout_callback = NULL, $wait = FALSE) {
+    if(!$wait){
+      $this->finalReactor = TRUE;
+    }
+    
     if(!$this->loopStarted) {
       if($timeout) {
         $that = $this;
@@ -114,18 +120,21 @@ class ReactClient {
     }
   }
   
-  public function stopReactor() {
-    if($this->loopStarted) {
+  public function stopReactor($endwait = FALSE) {
+    
+    if($this->loopStarted  && ($this->finalReactor && !$endwait) || !$this->finalReactor) {
       if($this->loopTimeout) {
         $this->clearTimeout($this->loopTimeout);
       }
       
       $this->loopStarted = false;
       $this->getLoop()->stop();
-    }
-    
-    foreach($this->connections AS $address => $conn) {
-      $this->wsDisconnect($address);
+      
+      $this->onLoopEndCallbacks = [];
+      
+      foreach($this->connections AS $address => $conn) {
+        $this->wsDisconnect($address);
+      }
     }
   }
   
@@ -214,7 +223,9 @@ class ReactClient {
     $error = NULL;
     
     $promise->always(function() use ($that) {
-      $that->stopReactor();
+      $that->setTimeout(function() use ($that){
+        $that->stopReactor(TRUE);
+      });
     });
     
     $promise->then(function ($res) use (&$result) {
@@ -224,13 +235,22 @@ class ReactClient {
       throw $error;
     });
     
-    $this->startReactor($timeout);
+    $this->startReactor($timeout, NULL, TRUE);
     
     if($error) {
       throw $error;
     }
     
     return $result;
+  }
+  
+  public function waitBool(Promise $promise, $timeout = NULL) {
+    try {
+      $this->wait($promise, $timeout);
+      return TRUE;
+    } catch (\Exception $e) {
+      return FALSE;
+    }
   }
   
   public function passPromise(PromiseInterface $promise, Deferred $pass_to) {
