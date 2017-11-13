@@ -216,7 +216,7 @@ class ReactClient {
     return $result->promise();
   }
   
-  public function wait(Promise $promise, $timeout = NULL) {
+  public function wait(PromiseInterface $promise, $timeout = NULL) {
     $that = $this;
     $result = NULL;
     /** @var \Wapi\Protocol\Exception\WapiProtocolException $error */
@@ -244,7 +244,7 @@ class ReactClient {
     return $result;
   }
   
-  public function waitBool(Promise $promise, $timeout = NULL) {
+  public function waitBool(PromiseInterface $promise, $timeout = NULL) {
     try {
       $this->wait($promise, $timeout);
       return TRUE;
