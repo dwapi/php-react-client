@@ -178,11 +178,11 @@ class ReactClient {
     }
   }
   
-  public function wsSend($address, $secret, $method, $data, $clock_offset = 0) {
+  public function wsSend($address, $secret, $method, $data, $clock_offset = 0, $additional = []) {
     $result = $this->newDeferred();
     
-    $this->wsConnect($address, function (WebSocket $conn, ReactClient $react_client) use ($result, $secret, $method, $data, $clock_offset) {
-      $body = Protocol::buildMessage($secret, $method, $data, [], $clock_offset);
+    $this->wsConnect($address, function (WebSocket $conn, ReactClient $react_client) use ($result, $secret, $method, $data, $clock_offset, $additional) {
+      $body = Protocol::buildMessage($secret, $method, $data, $additional, $clock_offset);
       $message_id = $body['message_id'];
       $conn->send(Protocol::encode($body));
       
