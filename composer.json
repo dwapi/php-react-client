@@ -10,7 +10,7 @@
     ],
     "require": {
         "ratchet/pawl": "^0.2.3",
-        "clue/buzz-react": "^1.1",
+        "clue/buzz-react": "1.1",
         "nyariv/wapi-protocol": "dev-master"
     },
     "autoload": {
