@@ -218,15 +218,7 @@ class ReactClient {
      * @throws \Exception
      */
   public function wait(PromiseInterface $promise, $timeout = NULL) {
-
-    $promises = [$promise];
-    if ($timeout) {
-        $promises[] = $this->setTimeout(function () {
-            throw new \Exception('Timed out');
-        }, $timeout);
-    }
-
-    return \Clue\React\Block\awaitAny($promises, $this->getLoop());
+    return \Clue\React\Block\await($promise, $this->getLoop(), $timeout);
   }
   
   public function waitBool(PromiseInterface $promise, $timeout = NULL) {
