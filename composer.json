@@ -11,7 +11,8 @@
     "require": {
         "ratchet/pawl": "^0.2.3",
         "clue/buzz-react": "1.1",
-        "nyariv/wapi-protocol": "dev-master"
+        "nyariv/wapi-protocol": "dev-master",
+        "clue/block-react": "^1.2"
     },
     "autoload": {
         "psr-4": {"Wapi\\ReactClient\\": "src"}

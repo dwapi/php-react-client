@@ -62,8 +62,6 @@ class ReactClient {
    */
   protected $browser;
   
-  protected $finalReactor = FALSE;
-  
   /**
    * Constructs a ReactClient object.
    */
@@ -87,10 +85,7 @@ class ReactClient {
     return $this->browser = $this->browser ?: new Browser($this->getLoop());
   }
   
-  public function startReactor($timeout = NULL, callable $timeout_callback = NULL, $wait = FALSE) {
-    if(!$wait){
-      $this->finalReactor = TRUE;
-    }
+  public function startReactor($timeout = NULL, callable $timeout_callback = NULL) {
     
     if(!$this->loopStarted) {
       if($timeout) {
@@ -120,9 +115,9 @@ class ReactClient {
     }
   }
   
-  public function stopReactor($endwait = FALSE) {
+  public function stopReactor() {
     
-    if($this->loopStarted  && ($this->finalReactor && !$endwait) || !$this->finalReactor) {
+    if($this->loopStarted) {
       if($this->loopTimeout) {
         $this->clearTimeout($this->loopTimeout);
       }
@@ -215,33 +210,23 @@ class ReactClient {
     
     return $result->promise();
   }
-  
+
+    /**
+     * @param PromiseInterface $promise
+     * @param null $timeout
+     * @return mixed
+     * @throws \Exception
+     */
   public function wait(PromiseInterface $promise, $timeout = NULL) {
-    $that = $this;
-    $result = NULL;
-    /** @var \Wapi\Protocol\Exception\WapiProtocolException $error */
-    $error = NULL;
-    
-    $promise->always(function() use ($that) {
-      $that->setTimeout(function() use ($that){
-        $that->stopReactor(TRUE);
-      });
-    });
-    
-    $promise->then(function ($res) use (&$result) {
-      $result = $res;
-    }, function (WapiProtocolException $e) use (&$error) {
-      $error = $e;
-      throw $error;
-    });
-    
-    $this->startReactor($timeout, NULL, TRUE);
-    
-    if($error) {
-      throw $error;
+
+    $promises = [$promise];
+    if ($timeout) {
+        $promises[] = $this->setTimeout(function () {
+            throw new \Exception('Timed out');
+        }, $timeout);
     }
-    
-    return $result;
+
+    return \Clue\React\Block\awaitAny($promises, $this->getLoop());
   }
   
   public function waitBool(PromiseInterface $promise, $timeout = NULL) {
