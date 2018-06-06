@@ -150,7 +150,7 @@ class ReactClient {
     if(!empty($this->connections[$address])) {
       $promise = new FulfilledPromise($this->connections[$address]);
     } else {
-      $connector = new Connector($this->getLoop());
+      $connector = new Connector($this->getLoop(), NULL, ['verify_peer_name' => FALSE, 'verify_peer' => FALSE]);
       $promise = $connector($address, [], []);
       
       $promise->then(function(WebSocket $conn) use ($address, $that) {
